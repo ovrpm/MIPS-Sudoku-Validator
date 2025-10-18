@@ -1,1 +1,1 @@
-# MIPS-Sudoku-Verifier
+# MIPS-Sudoku-Validator
