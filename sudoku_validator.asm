@@ -1,6 +1,10 @@
+# Program File: sudoku_validator.asm 
+# Author: Matvey Oborotov
+# Purpose: validate sudoku configuration from files 'te0.txt' through 'te9.txt'
+
 .data
 	#ascii values;
-	#x = 120, 1 - 9 = 49 - 57
+	#'x' = 120, '0'-'9' = 48-57
 		
 	opening: .asciiz "Opening file: "
 	newline: .asciiz "\n"
@@ -14,17 +18,18 @@
 	andd: .asciiz "] & '"
 	output_end: .asciiz "])"
 	
-	
 	sudoku: .space 89 #file contains 89 symbols
 	
 	te: .asciiz "te"
 	txt: .asciiz ".txt"
 	file: .space 7 #all file names are 7 symbols long
 .text
+    	# Execution flow: main -> load_and_check_files -> load_and_validate_sudoku -> validation functions
+	main:
 	
 	jal load_and_check_files
 	
-	#return
+	#halt
 	li $v0, 10
 	syscall
 	
@@ -34,12 +39,13 @@
 			sw $ra, 0($sp)
 			sw $s0, 4($sp)
 			sw $s1, 8($sp)
-		
+			
+			#go through the files from 0 to 9
 			addi $s0, $zero, 0
 			addi $s1, $zero, 9
 			
 			addi $a1, $s0, 0
-			jal load_and_check
+			jal load_and_validate_sudoku
 			addi $s0, $s0, 1
 		load_and_check_files_loop:
 			bgt $s0, $s1, load_and_check_files_end
@@ -53,7 +59,7 @@
 			syscall
 			
 			addi $a1, $s0, 0
-			jal load_and_check
+			jal load_and_validate_sudoku
 			addi $s0, $s0, 1
 			
 			j load_and_check_files_loop
@@ -66,20 +72,20 @@
 			jr $ra
 			
 	
-	#input: a1 is number of the file of the file
-	load_and_check:
-		load_and_check_setup:
+	#input: a1 is number of the file from 0 to 9
+	load_and_validate_sudoku:
+		load_and_validate_sudoku_setup:
 			addi $sp, $sp, -16
 			sw $ra, 0($sp)
 			sw $s0, 4($sp)
 			sw $s1, 8($sp)
 			sw $s6, 12($sp)
 			
+			#get the name of the file
 			jal concatenate
 			move $a0, $v1
-			move $s1, $v1 #for output
 			
-			#open file
+			#open file and get file descriptor
 			li $v0, 13
 			addi $a1, $zero, 0
 			addi $a2, $zero, 0
@@ -95,7 +101,7 @@
 			
 			#right now the array is in a1
 			
-			#output: "Opening file: te{num}.txt\n"
+			#print: "Opening file: te{num}.txt\n"
 			li $v0, 4
 			la $a0, opening
 			syscall
@@ -114,21 +120,21 @@
 			la $a0, newline
 			syscall
 			
-		load_and_check_load:		
+		load_and_validate_sudoku_load:		
 			jal check_rows
-			beq $v1, -1, load_and_check_not_valid
+			beq $v1, -1, load_and_validate_sudoku_not_valid
 			
 			jal check_columns		
-			beq $v1, -1, load_and_check_not_valid
+			beq $v1, -1, load_and_validate_sudoku_not_valid
 			
 			jal check_boxes
-			beq $v1, -1, load_and_check_not_valid
+			beq $v1, -1, load_and_validate_sudoku_not_valid
 			
-		load_and_check_valid:
+		load_and_validate_sudoku_valid:
 			li $v0, 4
 			la $a0, valid
 			syscall
-		load_and_check_not_valid:
+		load_and_validate_sudoku_not_valid:
 			lw $ra, 0($sp)
 			lw $s0, 4($sp)
 			lw $s1, 8($sp)
@@ -138,7 +144,7 @@
 	
 	#all of the procedures below are needed for load_and_check	
 	#input: a1 is the array
-	#output: v1 = -1 if not valid + output message, and base adress of the array if valid
+	#output: v1 = -1 and output message if not valid, and base adress of the array if valid
 	check_rows:
 		check_rows_setup:
 			addi $sp, $sp, -32
@@ -155,16 +161,16 @@
 			addi $s0, $zero, -10 #rows counter (i), -10 to start from 0
 			addi $s1, $zero, 0 #num1 counter (j)
 			addi $s2, $zero, 0 #num2 counter (k)
-			addi $s3, $zero, 90 #max
+			addi $s3, $zero, 90 #max value for i
 			
 		#rows
-		# for (int i = 0; i < 90; i += 10){
+		#for (int i = 0; i < 90; i += 10)
 		check_rows_loop1:
 			addi $s0, $s0, 10
 			bge $s0, $s3, check_rows_end
 				
 		#num1
-		#for (int j = i; j < i + 8; j++){
+		#for (int j = i; j < i + 8; j++)
 		check_rows_loop2_setup:
 			addi $s1, $s0, 0 # int j = i
 			addi $s4, $s0, 8 # i + 8
@@ -179,7 +185,7 @@
 			
 			beq $s6, 120, check_rows_loop2
 						
-		#num2 for (int k = j + 1; k < i + 9; k++){
+		#num2 for (int k = j + 1; k < i + 9; k++)
 		check_rows_loop3_setup:
 			addi $s2, $s1, 0 # k = j + 1 (because s1 is already incremented)
 			addi $s5, $s0, 9 # i + 9
@@ -191,14 +197,14 @@
 			sub $a1, $a1, $s2 #to preserve a1
 			
 			addi $s2, $s2, 1 
-			beq $s7, 120, check_rows_loop3 #skip 'x'
+			beq $s7, 120, check_rows_loop3 #skip the current character is 'x'
 			
 			beq $s6, $s7, check_rows_not_valid
 			
 			j check_rows_loop3
 						
 		check_rows_not_valid:
-			addi $s3, $zero, 10 #dont need s3 anymore
+			# print to screen:
 			# "now valid, because "
 			li $v0, 4
 			la $a0, not_valid
@@ -217,6 +223,7 @@
 			syscall	
 			# "{i / 10}"
 			li $v0, 1
+			addi $s3, $zero, 10
 			div $a0, $s0, $s3
 			syscall
 			# ","
@@ -274,7 +281,7 @@
 			jr $ra
 			
 	#input: a1 is the array
-	#output: v1 = -1 if not valid + output message, and base adress of the array if valid
+	#output: v1 = -1 and output message if not valid, and base adress of the array if valid
 	check_columns:
 		check_columns_setup:
 			addi $sp, $sp, -32
@@ -291,16 +298,16 @@
 			addi $s0, $zero, -1 #rows counter (i), -1 to start from 0
 			addi $s1, $zero, 0 #num1 counter (j)
 			addi $s2, $zero, 0 #num2 counter (k)
-			addi $s3, $zero, 9 #max
+			addi $s3, $zero, 9 #max value for i
 			
 		#rows
-		# for (int i = 0; i < 9; i++){
+		# for (int i = 0; i < 9; i++)
 		check_columns_loop1:
 			addi $s0, $s0, 1
 			bge $s0, $s3, check_columns_end
 				
 		#num1
-		#for (int j = i; j < 80; j += 10){
+		#for (int j = i; j < 80; j += 10)
 		check_columns_loop2_setup:
 			addi $s1, $s0, 0 # int j = i
 			addi $s4, $zero, 80
@@ -315,7 +322,7 @@
 			
 			beq $s6, 120, check_columns_loop2
 						
-		#num2 for (int k = j + 10; k < 90; k += 10){
+		#num2 for (int k = j + 10; k < 90; k += 10)
 		check_columns_loop3_setup:
 			addi $s2, $s1, 10 # k = j + 10
 			addi $s5, $zero, 90
@@ -334,8 +341,8 @@
 			j check_columns_loop3
 						
 		check_columns_not_valid:
-			addi $s3, $zero, 10 #dont need s3 anymore
-			# "now valid, because "
+			# print to the screen:
+			# "not valid, because "
 			li $v0, 4
 			la $a0, not_valid
 			syscall
@@ -353,6 +360,7 @@
 			syscall	
 			# "{j / 10 - 1}"
 			li $v0, 1
+			addi $s3, $zero, 10
 			div $s1, $s3 # j / 10
 			mflo $a0
 			addi $a0, $a0, -1 # (j / 10) -  1
@@ -412,9 +420,8 @@
 			jr $ra
 	
 	#input: a1 is the sudoku array
+	#output: v1 = -1 and output message if not valid, and base adress of the array if valid
 	check_boxes:
-		#relative position of every element of the box is always the same
-		#so this code will work with every sudoku file, assuming the format is always the same
 		check_boxes_setup:
 			addi $sp, $sp, -8
 			sw $ra, 0($sp)
@@ -423,7 +430,7 @@
 			addi $s0, $a1, 0
 		check_boxes_main:
 			#box1
-			jal from_box_to_array			
+			jal from_box_to_array		
 			move $a2, $v0
 			addi $a0, $zero, 0
 			addi $a1, $zero, 0
@@ -486,7 +493,7 @@
 			#box8
 			addi $s0, $s0, 3
 			addi $a1, $s0, 0
-			jal from_box_to_array
+			jal from_box_to_array	
 			move $a2, $v0
 			addi $a0, $zero, 6
 			addi $a1, $zero, 3
@@ -510,7 +517,7 @@
 			jr $ra
 			
 	#input: a2 is base adress of the array, $a0 is its row number, $a1 is its column number
-	#output: v1 is -1 if not valid + output message
+	#output: v1 is -1 and output message if not valid 
 	check_one_box:
 		check_one_box_setup:
 			addi $sp, $sp, -36
@@ -534,7 +541,7 @@
 			
 			add $a2, $a2, $s0
 			lb $s4, 0($a2) #num1
-			sub $a2, $a2, $s0 # to preserve a2
+			sub $a2, $a2, $s0 # preserve a2
 			
 			addi $s0, $s0, 1
 			
@@ -549,7 +556,7 @@
 			
 			add $a2, $a2, $s2
 			lb $s5, 0($a2) #num2
-			sub $a2, $a2, $s2 # to preserve a2
+			sub $a2, $a2, $s2 # preserve a2
 			
 			addi $s2, $s2, 1
 			
@@ -560,11 +567,12 @@
 			j check_one_box_loop2
 			
 		check_one_box_not_valid:
-			addi $s0, $s0, -1 #was unnesesarry incremented
-			addi $s2, $s2, -1 #same
-			addi $s3, $zero, 3 #dont need s3 anymore
+			addi $s0, $s0, -1 
+			addi $s2, $s2, -1 
+			addi $s3, $zero, 3 # initialize for division 
 		
-			# "now valid, because "
+			# print to the screen:
+			# "not valid, because "
 			li $v0, 4
 			la $a0, not_valid
 			syscall
@@ -646,10 +654,8 @@
 		
 		
 	#input: $a1 is the top left corner adress
-	#output: $v0 is the base adress of the array
+	#output: $v0 is the base adress of the array, representing 3x3 box
 	from_box_to_array:
-		#position of every element of the box relative to the top left corner element is the same
-		#so this code will work with every sudoku file, assuming the format is always the same
 		#allocate for array
 		addi $sp, $sp, -12
 		sw $ra, 0($sp)
@@ -713,6 +719,7 @@
 		
 		
 	#input: a1 is the array of symbols from file
+	#output: sudoku grid to the screen
 	output_sudoku:
 		output_sudoku_setup:
 			addi $sp, $sp, -16
@@ -723,7 +730,7 @@
 		
 			addi $s7, $zero, 0
 			addi $s5, $zero, 89
-			move $s1, $a1 #to preserve a1
+			move $s1, $a1 #to preserve a1 (array of symbols)
 		output_sudoku_main:
 			beq $s5, $s7, output_sudoku_end
 		
@@ -765,7 +772,8 @@
 			la $s3, txt
 			la $s4, file
 			
-			move $s1, $s4 #base adress ofthe result
+			#save base adress of the result
+			move $s1, $s4
 		concatenate_str1:
 			lb $s0, 0($s2)
 			beqz $s0, concatenate_fileNum
@@ -775,7 +783,7 @@
 			
 			j concatenate_str1			
 		concatenate_fileNum:
-			addi $s0, $a1, 48 #ascii for "1"
+			addi $s0, $a1, 48 #convert from integer to ascii ('0' = 48)
 			sb $s0, 0($s4)
 			addi $s4, $s4, 1
 			
