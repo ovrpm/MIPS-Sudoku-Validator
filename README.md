@@ -100,7 +100,7 @@ The check_boxes subroutine is more complex, and consists of 3 subroutines itself
 check_boxes_main base logic:
 ```c
 int s = 0; // index of the upper-left element in a 3x3 box
-char box_array[] = from_box_to_array(s); // temporary storing of a 3x3 bog in contiguous memory
+char box_array[] = from_box_to_array(s); // temporary storing of a 3x3 box in contiguous memory
 if (check_one_box(box_array) == -1) // validation (invalid)
 ...
 ```
