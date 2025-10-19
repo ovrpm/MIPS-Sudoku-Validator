@@ -166,40 +166,40 @@
 		#rows
 		#for (int i = 0; i < 90; i += 10)
 		check_rows_loop1:
-			addi $s0, $s0, 10
-			bge $s0, $s3, check_rows_end
+			addi $s0, $s0, 10 #add 10 to skip '\n' character
+			bge $s0, $s3, chech_rows_valid
 				
 		#num1
-		#for (int j = i; j < i + 8; j++)
+		#for (int j = i; j < j_end + 8; j_start++)
 		check_rows_loop2_setup:
 			addi $s1, $s0, 0 # int j = i
-			addi $s4, $s0, 8 # i + 8
+			addi $s4, $s0, 8 # int j_end = i + 8
 		check_rows_loop2:
 			bge $s1, $s4, check_rows_loop1
 			
 			add $a1, $a1, $s1
-			lb $s6, 0($a1) #num1
-			sub $a1, $a1, $s1 #to preserve a1
+			lb $s6, 0($a1) #load num1 = sudoku[j]
+			sub $a1, $a1, $s1 #to preserve i value
 			
 			addi $s1, $s1, 1
 			
-			beq $s6, 120, check_rows_loop2
+			beq $s6, 120, check_rows_loop2 #if (sudoku[j] == 'x') continue;
 						
-		#num2 for (int k = j + 1; k < i + 9; k++)
+		#num2: for (int k = j + 1; k < i + 9; k++)
 		check_rows_loop3_setup:
-			addi $s2, $s1, 0 # k = j + 1 (because s1 is already incremented)
-			addi $s5, $s0, 9 # i + 9
+			addi $s2, $s1, 0 # k = j + 1 (add 0 because s1 is already incremented)
+			addi $s5, $s0, 9 # load i + 9
 		check_rows_loop3:
 			bge $s2, $s5, check_rows_loop2
 			
 			add $a1, $a1, $s2
 			lb $s7, 0($a1)
-			sub $a1, $a1, $s2 #to preserve a1
+			sub $a1, $a1, $s2 #to preserve k value
 			
-			addi $s2, $s2, 1 
-			beq $s7, 120, check_rows_loop3 #skip the current character is 'x'
+			addi $s2, $s2, 1
+			beq $s7, 120, check_rows_loop3 #if (sudoku[k] == 'x') continue;
 			
-			beq $s6, $s7, check_rows_not_valid
+			beq $s6, $s7, check_rows_not_valid # if (num1 == num2) check_rows_not_valid();
 			
 			j check_rows_loop3
 						
@@ -267,7 +267,7 @@
 			
 			addi $v1, $zero, -1
 			
-		check_rows_end:
+		chech_rows_valid:
 			lw $s0, 0($sp)
 			lw $s1, 4($sp)
 			lw $s2, 8($sp)
@@ -300,7 +300,7 @@
 			addi $s2, $zero, 0 #num2 counter (k)
 			addi $s3, $zero, 9 #max value for i
 			
-		#rows
+		# columns
 		# for (int i = 0; i < 9; i++)
 		check_columns_loop1:
 			addi $s0, $s0, 1
